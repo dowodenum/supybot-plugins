@@ -52,7 +52,7 @@ __maintainer__ = getattr(
 __contributors__ = {}
 
 # This is a url where the most recent plugin package can be downloaded.
-__url__ = "https://github.com/dowodenum/supybot-plugins/Tarot/"
+__url__ = "https://github.com/dowodenum/supybot-plugins/tree/main/Tarot"
 
 from . import config
 from . import plugin
