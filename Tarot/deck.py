@@ -69,10 +69,8 @@ class Deck:
 
     def __next__(self):
         """
-        Draw the top card from the deck and return it.
-
-        Drawn card is removed from the deck. If it was the last card, deck is
-        shuffled.
+        Draw the top X cards from the deck and return it/them.
+        If the last card is drawn (autoShuffle off), shuffle the deck.
         """
         card = self.deck.pop()
         if not self.deck:

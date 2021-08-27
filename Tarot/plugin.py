@@ -33,6 +33,7 @@ from .deck import Deck
 from operator import itemgetter
 import re
 import random
+import sys,traceback
 
 from supybot.commands import additional, wrap
 from supybot.utils.str import format, ordinal
@@ -66,8 +67,15 @@ class Tarot(callbacks.Plugin):
             irc.reply("; ".join(results))
 
     def __init__(self, irc):
-        super(Tarot, self).__init__(irc)
+        self.__parent = super(Tarot, self)
+        self.__parent.__init__(irc)
         self.deck = Deck()
+
+    def _autoShuffleEnabled(self, irc, channel):
+        """
+        Check if automatic shuffling is enabled for this context.
+        """
+        return (irc.isChannel(channel) and self.registryValue("autoShuffle", channel))
 
     def shuffle(self, irc, msg, args):
         """takes no arguments
@@ -75,7 +83,7 @@ class Tarot(callbacks.Plugin):
         Restores and shuffles the deck.
         """
         self.deck.shuffle()
-        irc.reply("shuffled")
+        irc.reply("Tarot card deck shuffled.")
 
     shuffle = wrap(shuffle)
 
@@ -86,6 +94,8 @@ class Tarot(callbacks.Plugin):
         """
         cards = [next(self.deck) for i in range(count)]
         irc.reply(", ".join(cards))
+        if self._autoShuffleEnabled(irc, msg.channel):
+            self.deck.shuffle()
 
     draw = wrap(draw, [additional("positiveInt", 1)])
     deal = draw
