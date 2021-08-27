@@ -23,4 +23,5 @@ deck is automatically shuffled before drawing next card.
 
 oddluck for Deck functions and overall plugin structure:
 https://github.com/oddluck/limnoria-plugins/tree/master/Dice
-
+cottongin for troubleshooting help with python, code reference:
+https://github.com/cottongin/StreamStuff/
