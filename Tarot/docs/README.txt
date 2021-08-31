@@ -7,11 +7,13 @@ do. It takes an expression such as 'draw 3' and returns a series of cards.
 
 Deck
 ~~~~
-Bot has a 78-card deck based on Marseilles which it can shuffle (!shuffle command)
-and from which you can draw (!draw or !deal command, with optional number
-argument if you want to draw several cards). Drawn card is removed from
-the deck, but shuffle restores full deck. If the last card is drawn, the
-deck is automatically shuffled before drawing next card.
+A 78-card Marseilles deck which can be manually shuffled with the !shuffle command,
+or set to shuffle automatically after each draw with the autoShuffle config setting.
+The !draw X command displays the top X cards, removing them from the deck (unless 
+autoShuffle is set). When the last card is drawn, the deck is automatically shuffled, 
+but this is rare because you probably won't be using 78 cards in a single spread.
+Also available is a reversal configuration paramter, allowing cards to be randomly
+drawn upside-down. This occurs at the time of draw, not at the time of shuffle.
 
 Thanks
 ~~~~~~
