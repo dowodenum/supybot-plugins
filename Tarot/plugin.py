@@ -39,6 +39,7 @@ from supybot.commands import additional, wrap
 from supybot.utils.str import format, ordinal
 import supybot.ircmsgs as ircmsgs
 import supybot.callbacks as callbacks
+import random
 
 
 class Tarot(callbacks.Plugin):
@@ -77,6 +78,12 @@ class Tarot(callbacks.Plugin):
         """
         return (irc.isChannel(channel) and self.registryValue("autoShuffle", channel))
 
+    def _reversalEnabled(self, irc, channel):
+        """
+        Check if reversed cards are enabled for this context.
+        """
+        return (irc.isChannel(channel) and self.registryValue("reversal", channel))
+
     def shuffle(self, irc, msg, args):
         """takes no arguments
 
@@ -92,13 +99,15 @@ class Tarot(callbacks.Plugin):
 
         Draws <count> cards (1 if omitted) from the deck and shows them.
         """
+        rev = self._reversalEnabled(irc, msg.channel)
         cards = [next(self.deck) for i in range(count)]
+        if rev:
+            cards = [i + ["", " (reversed)"][bool(random.getrandbits(1))] for i in cards]
         irc.reply(", ".join(cards))
         if self._autoShuffleEnabled(irc, msg.channel):
             self.deck.shuffle()
 
     draw = wrap(draw, [additional("positiveInt", 1)])
-    deal = draw
 
     def doPrivmsg(self, irc, msg):
         if ircmsgs.isAction(msg):
