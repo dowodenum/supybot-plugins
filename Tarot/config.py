@@ -62,3 +62,15 @@ conf.registerChannelValue(
     ),
 )
 
+conf.registerChannelValue(
+    Tarot,
+    "reversal",
+    registry.Boolean(
+        False,
+        _(
+            """
+            Whether reversed cards should be generated.
+            """
+        ),
+    ),
+)
