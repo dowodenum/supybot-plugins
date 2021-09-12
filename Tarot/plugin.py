@@ -1,122 +1,149 @@
 ###
-# Copyright (c) 2008, Andrey Rahmatullin
-# Copyright (c) 2020, oddluck <oddluck@riseup.net>
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-#
-#   * Redistributions of source code must retain the above copyright notice,
-#     this list of conditions, and the following disclaimer.
-#   * Redistributions in binary form must reproduce the above copyright notice,
-#     this list of conditions, and the following disclaimer in the
-#     documentation and/or other materials provided with the distribution.
-#   * Neither the name of the author of this software nor the name of
-#     contributors to this software may be used to endorse or promote products
-#     derived from this software without specific prior written consent.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-# ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-# POSSIBILITY OF SUCH DAMAGE.
+# All copyright waived via CC0. Written Sept 2021, by SirVo#
+# 
+# Tarot deck descriptions collected by sheoak: https://github.com/sheoak/tarot-deck
 ###
 
-from .deck import Deck
+import random, json
+from supybot import utils, plugins, ircutils, callbacks
+from supybot.commands import *
 
-from operator import itemgetter
-import re
-import random
-import sys,traceback
+try:
+    from supybot.i18n import PluginInternationalization
+    _ = PluginInternationalization('Tarot')
+except ImportError:
+    # Placeholder that allows to run the plugin on a bot
+    # without the i18n module
+    _ = lambda x: x
 
-from supybot.commands import additional, wrap
-from supybot.utils.str import format, ordinal
-import supybot.ircmsgs as ircmsgs
-import supybot.callbacks as callbacks
-import random
-
+deck = {}
 
 class Tarot(callbacks.Plugin):
-    """This plugin supports drawing the cards using !draw 1 or !draw 2 etc.
-    """
-
-    def _process(self, irc, text):
-        """
-        Process a message and reply with draw results, if any.
-
-        The message is split to the words and each word is checked against all
-        known expression forms (first applicable form is used). All results
-        are printed together in the IRC reply.
-        """
-        checklist = []
-        results = []
-        for word in text.split():
-            for expr, parser in checklist:
-                m = expr.match(word)
-                if m:
-                    r = parser(m)
-                    if r:
-                        results.append(r)
-                        break
-        if results:
-            irc.reply("; ".join(results))
+    """Tarot deck simulator"""
+    pass
 
     def __init__(self, irc):
         self.__parent = super(Tarot, self)
         self.__parent.__init__(irc)
-        self.deck = Deck()
+        self.rng = random.Random()
+        with open('./plugins/Tarot/cards.json') as deckFile:
+            self.deck = json.loads(deckFile.read())
 
-    def _autoShuffleEnabled(self, irc, channel):
-        """
-        Check if automatic shuffling is enabled for this context.
-        """
-        return (irc.isChannel(channel) and self.registryValue("autoShuffle", channel))
-
+    def _reseed(self):
+        self.rng.seed()
+        
     def _reversalEnabled(self, irc, channel):
         """
         Check if reversed cards are enabled for this context.
         """
         return (irc.isChannel(channel) and self.registryValue("reversal", channel))
 
-    def shuffle(self, irc, msg, args):
-        """takes no arguments
-
-        Restores and shuffles the deck.
+    def _artEnabled(self, irc, channel):
         """
-        self.deck.shuffle()
-        irc.reply("Tarot card deck shuffled.")
-
-    shuffle = wrap(shuffle)
+        Check if appending card art URLs is enabled for this context.
+        """
+        return (irc.isChannel(channel) and self.registryValue("cardArt", channel))
 
     def draw(self, irc, msg, args, count):
-        """[<count>]
+        """[<number of cards>]
 
-        Draws <count> cards (1 if omitted) from the deck and shows them.
+        Returns a number of tarot cards and automatically shuffles the deck after.
+        A new time-based seed is used for every request.
+        If only one card is requested, appends any available card art URLs.
         """
-        rev = self._reversalEnabled(irc, msg.channel)
-        cards = [next(self.deck) for i in range(count)]
-        if rev:
-            cards = [i + ["", " (reversed)"][bool(random.getrandbits(1))] for i in cards]
-        irc.reply(", ".join(cards))
-        if self._autoShuffleEnabled(irc, msg.channel):
-            self.deck.shuffle()
+        self._reseed()
+        art = ""
+
+        # grab 'count' total key elements randomly from deck json
+        drawn = random.choices(list(self.deck.keys()), k=count)
+
+        # set default card orientation to upright
+        rev = [0 for i in range(len(drawn))]
+
+        # check if flipped cards are on, generate list of coin flips equal to count
+        if self._reversalEnabled(irc, msg.channel):
+            rev = [bool(random.getrandbits(1)) for i in drawn]
+
+        # prep URL for assembly if: art is on, count is 1, json contains a URL
+        if self._artEnabled(irc, msg.channel) and count == 1 and len(art) > 1:
+            art = " - " + self.deck[drawn[0]]['art']
+
+        irc.reply(', '.join(drawn[i] + ['', ' (r)'][rev[i]] + art for i in range(len(drawn))))
 
     draw = wrap(draw, [additional("positiveInt", 1)])
 
-    def doPrivmsg(self, irc, msg):
-        if ircmsgs.isAction(msg):
-            text = ircmsgs.unAction(msg)
-        else:
-            text = msg.args[1]
-        self._process(irc, text)
+    def art(self, irc, msg, args, text):
+        """<tarot card alias>
+
+        Returns the card art link for a given tarot card, if available.
+        Custom art URLs can be added to ./plugins/Tarot/cards.json
+        """
+        for k in self.deck.keys():
+            if text.lower() == k.lower() or text.lower() in self.deck[k]['aliases']:
+                card = k
+                art = self.deck[k]['art']
+                if 'http' in art:
+                    irc.reply(card + ': ' + art)
+                    return
+                else:
+                    irc.reply("There is no art available for this card. Make me some!")
+                    return
+        irc.reply(
+            "Input does not match any card aliases, but here's a card picked randomly, especially for you! "
+            + self.deck['The Fool']['art'])
+
+    art = wrap(art, ['text'])
+
+    def describe(self, irc, msg, args, text):
+        """<tarot card alias>
+
+        Returns the description of a given tarot card. Warning: can be quite verbose.
+        """
+        for k in self.deck.keys():
+            if text.lower() == k.lower() or text.lower() in self.deck[k]['aliases']:
+                card = k
+                desc = self.deck[k]['desc']
+                irc.reply(card + ': ' + desc)
+                return
+        irc.reply('No match found.')
+
+    describe = wrap(describe, ['text'])
+
+    def interpret(self, irc, msg, args, text):
+        """<tarot card alias>
+
+        Returns the interpretation for a given tarot card. Use the 'rinterpret' command for reversed cards.
+        """
+        card, interp = "", ""
+
+        for k in self.deck.keys():
+            if text.lower() == k.lower() or text.lower() in self.deck[k]['aliases']:
+                card = k
+                interp = self.deck[k]['interp']
+                irc.reply(card + ': ' + interp)
+                return
+        irc.reply('No match found.')
+
+    interpret = wrap(interpret, ['text'])
+
+    def rinterpret(self, irc, msg, args, text):
+        """<tarot card alias>
+
+        Returns the interpretation for a given reversed tarot card. Use the 'interpret' command for upright cards.
+        """
+        card, interp = "", ""
+
+        for k in self.deck.keys():
+            if text.lower() == k.lower() or text.lower() in self.deck[k]['aliases']:
+                card = k
+                interp = self.deck[k]['interp_r']
+                irc.reply(card + ' (r): ' + interp)
+                return
+        irc.reply('No match found.')
+    rinterpret = wrap(rinterpret, ['text'])
+
 
 Class = Tarot
 
 
-# vim:set shiftwidth=4 tabstop=8 expandtab textwidth=78:
+# vim:set shiftwidth=4 softtabstop=4 expandtab textwidth=79:

@@ -1,30 +1,58 @@
-Tarot deck plugin.
-
-Forked from https://github.com/oddluck/limnoria-plugins/tree/master/Dice
-
-Install dependencies: python3 -m pip install -r requirements.txt
-
-## Description
-
-Tarot plugin contains the commands which simulate drawing of tarot cards.
-The most basic feature of any deck plugin is, of course, drawing of one or 
-several cards and showing the results. That is what core 'draw' command can
-do. It takes an expression such as 'draw 3' and returns a series of cards.
+Tarot deck simulator.
 
 ## Deck
 
-A 78-card Marseilles deck which can be manually shuffled with the !shuffle command,
-or set to shuffle automatically after each draw with the autoShuffle config setting.
-The !draw X command displays the top X cards, removing them from the deck (unless 
-autoShuffle is set). When the last card is drawn, the deck is automatically shuffled, 
-but this is rare because you probably won't be using 78 cards in a single spread.
-Also available is a reversal configuration paramter, allowing cards to be randomly
-drawn upside-down. This occurs at the time of draw, not at the time of shuffle.
+Uses a 78-card Marseilles deck.
+
+## Draw
+
+Using 'draw X', the bot will draw multiple unique cards from the deck for you.
+If no X is given, bot assumes you want just one card.
+A new time-based seed is given to Python's Random module for each draw command.
+
+## Reversal
+
+If the plugins.Tarot.reversal config setting is set True, coin flips are done
+at the time of draw to determine whether each card drawn is inverted.
+
+## Describe
+
+Using 'describe <alias>' the user can request the bot to read out a (verbose)
+artistic description of the card.
+
+## Interpret
+
+Using either 'interpret <alias>' or 'rinterpret <alias>' the user can get an
+interpretation of the card from the bot, for upright or inverted cards, respectively.
+
+## Art
+
+Custom art URLs can be added to the cards.json file, in URL format. If the
+plugins.Tarot.cardArt config setting is True, then these will be appended to single
+card draws. The art URL can be requested on its own with the 'art <alias>' command.
+
+## Aliases
+
+You can use typical alternate spellings (judgement/judgment) as well as short codes.
+For the Major Arcana, numbers 0-21 and roman numerals I-XXI will work.
+For Minor Arcana, short codes like '2ow' for 'Two of Wands' or 'know' for Knight
+of Pentacles.
+
+Examples: 
+"tower" -> "The Tower"
+"wheel" -> "The Wheel of Fortune"
+"aoc" -> "Ace of Cups"
+"kos" -> "King of Swords"
 
 ## Thanks
 
-oddluck for Deck functions and overall plugin structure:
+oddluck for Deck functions and overall plugin structure 
+(I've since rewritten this from scratch, with the main change being the utilization 
+of Python's Random.choices() function)
 https://github.com/oddluck/limnoria-plugins/tree/master/Dice
 
-cottongin for troubleshooting help with python, code reference:
+cottongin for Python troubleshooting and code advice:
 https://github.com/cottongin/StreamStuff/
+
+sheoak for collecting descriptions/interpretations into a nice CSV file:
+https://github.com/sheoak/tarot-deck
